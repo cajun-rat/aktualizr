@@ -23,6 +23,8 @@ enum class SecondaryType {
   kIpUptane,  // Custom Uptane protocol over TCP/IP network
 
   kVirtualUptane,  // Partial UPTANE secondary implemented inside primary
+  kIsoTpUptane,    // Custom Uptane protocol over ISO/TP network
+
 };
 
 class SecondaryConfig {
@@ -43,6 +45,8 @@ class SecondaryConfig {
       secondary_type = Uptane::SecondaryType::kIpUptane;
     } else if (stype == "opcua_uptane") {
       secondary_type = Uptane::SecondaryType::kOpcuaUptane;
+    } else if (stype == "isotp_uptane") {
+      secondary_type = Uptane::SecondaryType::kIsoTpUptane;
     } else {
       LOG_ERROR << "Unrecognized secondary type: " << stype;
     }
@@ -69,6 +73,12 @@ class SecondaryConfig {
         key_type = KeyType::kED25519;
       }
     }
+    try {
+      can_id = static_cast<uint16_t>(stoi(config_json["can_id"].asString(), nullptr, 16));
+    } catch (...) {
+      can_id = 0;
+    }
+    can_iface = config_json["can_interface"].asString();
   }
   SecondaryType secondary_type{};
   std::string ecu_serial;
@@ -86,6 +96,9 @@ class SecondaryConfig {
   boost::filesystem::path target_name_path;  // SecondaryType::kVirtual
 
   sockaddr_storage ip_addr{};  // SecondaryType::kIpUptane
+
+  uint16_t can_id;        // SecondaryType::kIsoTpUptane;
+  std::string can_iface;  // SecondaryType::kIsoTpUptane;
 };
 }  // namespace Uptane
 
