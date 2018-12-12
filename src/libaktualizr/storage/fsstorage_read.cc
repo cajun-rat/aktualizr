@@ -248,6 +248,7 @@ bool FSStorageRead::loadInstalledVersions(std::vector<Uptane::Target>* installed
   return INvStorage::fsReadInstalledVersions(path, installed_versions, current_version);
 }
 
+#if 0
 bool FSStorageRead::loadInstallationResult(data::OperationResult* result) {
   if (!boost::filesystem::exists(Utils::absolutePath(config_.path, "installation_result").string())) {
     return false;
@@ -259,6 +260,7 @@ bool FSStorageRead::loadInstallationResult(data::OperationResult* result) {
   }
   return true;
 }
+#endif
 
 bool FSStorageRead::splitNameRoleVersion(const std::string& full_name, std::string* role_name, int* version) {
   size_t dot_pos = full_name.find('.');

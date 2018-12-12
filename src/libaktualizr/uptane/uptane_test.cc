@@ -140,7 +140,7 @@ TEST(Uptane, AssembleManifestGood) {
   auto sota_client = SotaUptaneClient::newTestClient(config, storage, http);
   EXPECT_NO_THROW(sota_client->initialize());
 
-  Json::Value manifest = sota_client->AssembleManifest();
+  Json::Value manifest = sota_client->AssembleManifest()["ecu_version_manifests"];
   EXPECT_EQ(manifest.size(), 2);
   EXPECT_EQ(manifest["testecuserial"]["signed"]["ecu_serial"].asString(), config.provision.primary_ecu_serial);
   EXPECT_EQ(manifest["secondary_ecu_serial"]["signed"]["ecu_serial"].asString(), "secondary_ecu_serial");
@@ -178,7 +178,7 @@ TEST(Uptane, AssembleManifestBad) {
   auto sota_client = SotaUptaneClient::newTestClient(config, storage, http);
   EXPECT_NO_THROW(sota_client->initialize());
 
-  Json::Value manifest = sota_client->AssembleManifest();
+  Json::Value manifest = sota_client->AssembleManifest()["ecu_version_manifests"];
   EXPECT_EQ(manifest.size(), 1);
   EXPECT_EQ(manifest["testecuserial"]["signed"]["ecu_serial"].asString(), config.provision.primary_ecu_serial);
   // Manifest should not have an installation result yet.
@@ -254,14 +254,17 @@ TEST(Uptane, InstallFake) {
 
   // Make sure operation_result and filepath were correctly written and formatted.
   Json::Value manifest = up->AssembleManifest();
-  EXPECT_EQ(manifest["testecuserial"]["signed"]["custom"]["operation_result"]["id"].asString(), "testecuserial");
-  EXPECT_EQ(manifest["testecuserial"]["signed"]["custom"]["operation_result"]["result_code"].asInt(),
-            static_cast<int>(data::UpdateResultCode::kOk));
-  EXPECT_EQ(manifest["testecuserial"]["signed"]["custom"]["operation_result"]["result_text"].asString(),
-            "Installing fake package was successful");
-  EXPECT_EQ(manifest["testecuserial"]["signed"]["installed_image"]["filepath"].asString(), "testecuserial");
+  EXPECT_EQ(manifest["ecu_version_manifests"]["testecuserial"]["signed"]["installed_image"]["filepath"].asString(),
+            "testecuserial");
   // Verify nothing has installed for the secondary.
-  EXPECT_FALSE(manifest["secondary_ecu_serial"]["signed"].isMember("installed_image"));
+  EXPECT_FALSE(manifest["ecu_version_manifests"]["secondary_ecu_serial"]["signed"].isMember("installed_image"));
+
+  Json::Value installation_report = manifest["installation_report"]["report"];
+  EXPECT_EQ(installation_report["result"]["success"].asBool(), true);
+  EXPECT_EQ(installation_report["result"]["code"].asString(), "OK");
+  EXPECT_EQ(installation_report["items"][0]["ecu"].asString(), "testecuserial");
+  EXPECT_EQ(installation_report["items"][0]["result"]["success"].asBool(), true);
+  EXPECT_EQ(installation_report["items"][0]["result"]["code"].asString(), "OK");
 }
 
 /* Register secondary ECUs with director. */
