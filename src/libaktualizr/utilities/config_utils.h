@@ -152,9 +152,19 @@ class BaseConfig {
         continue;
       }
       if (boost::filesystem::is_directory(config)) {
+#if (!defined(ANDROID) || __ANDROID_API__ >= 28)
         for (const auto& config_file : Utils::glob((config / "*.toml").string())) {
           configs_map[config_file.filename().string()] = config_file;
         }
+#else
+        boost::filesystem::directory_iterator entryItEnd, entryIt(config);
+        for (; entryIt != entryItEnd; ++entryIt) {
+          auto& entry_path = entryIt->path();
+          if (!boost::filesystem::is_directory(*entryIt) && entry_path.extension().string() == ".toml") {
+            configs_map[entry_path.filename().string()] = entry_path;
+          }
+        }
+#endif
       } else {
         configs_map[config.filename().string()] = config;
       }

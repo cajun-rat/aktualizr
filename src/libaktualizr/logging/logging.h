@@ -1,7 +1,16 @@
 #ifndef SOTA_CLIENT_TOOLS_LOGGING_H_
 #define SOTA_CLIENT_TOOLS_LOGGING_H_
 
+#if (defined(ANDROID) && defined(__clang__))
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 #include <boost/log/trivial.hpp>
+#pragma GCC diagnostic pop
+#else
+#include <boost/log/trivial.hpp>
+#endif
 
 #include "logging_config.h"
 

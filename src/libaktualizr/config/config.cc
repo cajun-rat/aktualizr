@@ -141,9 +141,7 @@ KeyManagerConfig Config::keymanagerConfig() const {
 void Config::postUpdateValues() {
   logger_set_threshold(logger);
 
-  if (provision.provision_path.empty()) {
-    provision.mode = ProvisionMode::kImplicit;
-  }
+  provision.mode = provision.provision_path.empty() ? ProvisionMode::kImplicit : ProvisionMode::kAutomatic;
 
   if (tls.server.empty()) {
     if (!tls.server_url_path.empty()) {
@@ -258,10 +256,21 @@ void Config::readSecondaryConfigs(const boost::filesystem::path& sconfigs_dir) {
     LOG_ERROR << "Could not read secondary configs from " << sconfigs_dir << ": not a directory";
     return;
   }
+#if (!defined(ANDROID) || __ANDROID_API__ >= 28)
   for (const auto& config_file : Utils::glob((sconfigs_dir / "*.json").string())) {
     LOG_INFO << "Parsing secondary config: " << config_file;
     uptane.secondary_configs.emplace_back(config_file);
   }
+#else
+  boost::filesystem::directory_iterator entryItEnd, entryIt(sconfigs_dir);
+  for (; entryIt != entryItEnd; ++entryIt) {
+    auto& config_file = entryIt->path();
+    if (!boost::filesystem::is_directory(*entryIt) && config_file.extension().string() == ".json") {
+      LOG_INFO << "Parsing secondary config: " << config_file;
+      uptane.secondary_configs.emplace_back(config_file);
+    }
+  }
+#endif
 }
 
 void Config::writeToStream(std::ostream& sink) const {
