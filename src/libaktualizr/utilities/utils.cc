@@ -271,16 +271,8 @@ std::string Utils::genPrettyName() {
 }
 
 std::string Utils::readFile(const boost::filesystem::path &filename, const bool trim) {
-  boost::filesystem::path tmpFilename = filename;
-  tmpFilename += ".new";
-
-  if (boost::filesystem::exists(tmpFilename)) {
-    LOG_WARNING << tmpFilename << " was found on FS, removing";
-    boost::filesystem::remove(tmpFilename);
-  }
   std::ifstream path_stream(filename.c_str());
   std::string content((std::istreambuf_iterator<char>(path_stream)), std::istreambuf_iterator<char>());
-
   if (trim) {
     boost::trim_if(content, boost::is_any_of(" \t\r\n"));
   }
