@@ -843,8 +843,22 @@ class HttpFakeCampaign : public HttpFake {
   }
 };
 
+void CampaignCheck_events(const std::shared_ptr<event::BaseEvent>& event) {
+  std::cout << event->variant << "\n";
+  if (event->variant == "CampaignCheckComplete") {
+    auto concrete_event = std::static_pointer_cast<event::CampaignCheckComplete>(event);
+    EXPECT_EQ(concrete_event->result.campaigns.size(), 1);
+    EXPECT_EQ(concrete_event->result.campaigns[0].name, "campaign1");
+    EXPECT_EQ(concrete_event->result.campaigns[0].id, "c2eb7e8d-8aa0-429d-883f-5ed8fdb2a493");
+    EXPECT_EQ(concrete_event->result.campaigns[0].size, 62470);
+    EXPECT_EQ(concrete_event->result.campaigns[0].autoAccept, true);
+    EXPECT_EQ(concrete_event->result.campaigns[0].description, "this is my message to show on the device");
+  }
+}
+
 /* Check for campaigns with manual control.
- * Fetch campaigns from the server. */
+ * Fetch campaigns from the server.
+ * Send CampaignCheckComplete event with campaign data */
 TEST(Aktualizr, CampaignCheck) {
   TemporaryDirectory temp_dir;
   auto http = std::make_shared<HttpFakeCampaign>(temp_dir.Path());
@@ -852,6 +866,8 @@ TEST(Aktualizr, CampaignCheck) {
 
   auto storage = INvStorage::newStorage(conf.storage);
   Aktualizr aktualizr(conf, storage, http);
+  std::function<void(std::shared_ptr<event::BaseEvent> event)> f_cb = CampaignCheck_events;
+  aktualizr.SetSignalHandler(f_cb);
 
   aktualizr.Initialize();
   auto result = aktualizr.CampaignCheck().get();
