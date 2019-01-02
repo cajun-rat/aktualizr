@@ -975,32 +975,32 @@ class HttpPutManifestFail : public HttpFake {
   }
 };
 
-int num_events_PutManifestError = 0;
-void process_events_PutManifestError(const std::shared_ptr<event::BaseEvent>& event) {
+int num_events_UpdateCheckCompleteError = 0;
+void process_events_UpdateCheckCompleteError(const std::shared_ptr<event::BaseEvent>& event) {
   std::cout << event->variant << "\n";
   if (event->variant == "UpdateCheckComplete") {
     EXPECT_EQ(std::static_pointer_cast<event::UpdateCheckComplete>(event)->result.status, result::UpdateStatus::kError);
-    num_events_PutManifestError++;
+    num_events_UpdateCheckCompleteError++;
   }
 }
 
 /* Send UpdateCheckComplete event after failure */
-TEST(Aktualizr, PutManifestError) {
+TEST(Aktualizr, UpdateCheckCompleteError) {
   TemporaryDirectory temp_dir;
   auto http = std::make_shared<HttpPutManifestFail>(temp_dir.Path());
 
-  Config conf = makeTestConfig(temp_dir, "http://putmanifesterror");
+  Config conf = makeTestConfig(temp_dir, "http://updatefail");
 
   auto storage = INvStorage::newStorage(conf.storage);
-  std::function<void(std::shared_ptr<event::BaseEvent> event)> f_cb = process_events_PutManifestError;
+  std::function<void(std::shared_ptr<event::BaseEvent> event)> f_cb = process_events_UpdateCheckCompleteError;
 
-  num_events_PutManifestError = 0;
+  num_events_UpdateCheckCompleteError = 0;
   Aktualizr aktualizr(conf, storage, http);
   boost::signals2::connection conn = aktualizr.SetSignalHandler(f_cb);
   aktualizr.Initialize();
   auto result = aktualizr.CheckUpdates().get();
   EXPECT_EQ(result.status, result::UpdateStatus::kError);
-  EXPECT_EQ(num_events_PutManifestError, 1);
+  EXPECT_EQ(num_events_UpdateCheckCompleteError, 1);
 }
 
 /* Test that Aktualizr retransmits DownloadPaused and DownloadResumed events */
