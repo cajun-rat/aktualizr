@@ -1,6 +1,7 @@
 set(SOURCES aktualizr_version.cc
             apiqueue.cc
             dequeue_buffer.cc
+            demo.cc
             sig_handler.cc
             timer.cc
             types.cc
@@ -9,6 +10,7 @@ set(SOURCES aktualizr_version.cc
 set(HEADERS apiqueue.h
             aktualizr_version.h
             config_utils.h
+            demo.h
             dequeue_buffer.h
             exceptions.h
             fault_injection.h
@@ -27,5 +29,6 @@ add_aktualizr_test(NAME types SOURCES types_test.cc)
 add_aktualizr_test(NAME utils SOURCES utils_test.cc PROJECT_WORKING_DIRECTORY)
 add_aktualizr_test(NAME sighandler SOURCES sighandler_test.cc)
 add_aktualizr_test(NAME xml2json SOURCES xml2json_test.cc)
+add_aktualizr_test(NAME demo SOURCES demo_test.cc)
 
 aktualizr_source_file_checks(${SOURCES} ${HEADERS} ${TEST_SOURCES})
