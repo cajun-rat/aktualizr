@@ -28,6 +28,7 @@ jobs:
         with:
           submodules: recursive
       - run: git fetch --prune --unshallow
+      - run: git config --global --add safe.directory *
       - name: Docker login
         if: github.token
         run: echo ${{ github.token }} | docker login docker.pkg.github.com -u advancedtelematic --password-stdin
