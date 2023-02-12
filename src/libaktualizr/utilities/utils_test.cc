@@ -65,6 +65,33 @@ TEST(Utils, jsonToCanonicalStr) {
   EXPECT_EQ(Utils::jsonToCanonicalStr(parsed), "0");
 }
 
+TEST(Utils, jsonToCanonicalStrNonAscii) {
+  // libtuf uses a canonicalization that matches the following in python
+  // json.dumps(json.loads(x),
+  //            separators=(',',':'),
+  //            sort_keys=True,
+  //            ensure_ascii=False,
+  //            allow_nan=False)).encode('utf-8')
+
+  // Construct a piece of JSON that contains the following types of characters:
+  //  Literals (£)
+  //  C++ escaped characters in BMP (U+143)
+  //  C++ escaped characters beyond the BMP (U+1F600)
+  //  JSON escaped unicode control characters (\u0010)
+  //  Double quote inside a JSON string literal (\")
+  //  Whitespace ( )
+  const std::string sample = "{\"foo\" : \"£xx\u0143yyy\\u0010bang\U0001F600zzzz\\\"quote\"}";
+
+  // Note the following has a mostly C++ escape sequences, with JSON escapes only for U+10 and double quote
+  // It is a C++ bytes literal (that happens to contain a UTF-8 encoded data)
+  const std::string golden = "{\"foo\":\"\xc2\xa3xx\xc5\x83yyy\\u0010bang\xf0\x9f\x98\x80zzzz\\\"quote\"}";
+
+  Json::Value parsed_sample = Utils::parseJSON(sample);
+  EXPECT_EQ(parsed_sample["foo"], "£xx\u0143yyy\u0010bang\U0001F600zzzz\"quote");
+
+  EXPECT_EQ(Utils::jsonToCanonicalStr(parsed_sample), golden);
+}
+
 /* Read hardware info from the system. */
 TEST(Utils, getHardwareInfo) {
   Json::Value hwinfo = Utils::getHardwareInfo();

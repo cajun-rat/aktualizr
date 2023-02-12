@@ -353,6 +353,7 @@ std::string Utils::jsonToCanonicalStr(const Json::Value &json) {
   static Json::StreamWriterBuilder wbuilder = []() {
     Json::StreamWriterBuilder w;
     wbuilder["indentation"] = "";
+    wbuilder["emitUTF8"] = true;
     return w;
   }();
   return Json::writeString(wbuilder, json);
