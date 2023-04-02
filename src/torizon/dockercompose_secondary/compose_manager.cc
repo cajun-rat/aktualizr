@@ -18,8 +18,9 @@ bool ComposeManager::pull(const boost::filesystem::path &compose_file, const api
 }
 
 bool ComposeManager::up(const boost::filesystem::path &compose_file) {
-  LOG_INFO << "Running docker-compose up";
-  return CommandRunner::run(compose_cmd_ + compose_file.string() + " -p torizon up --detach --remove-orphans");
+  LOG_INFO << "Running fake-docker-compose up (that fails)";
+  return false;
+  //return CommandRunner::run(compose_cmd_ + compose_file.string() + " -p torizon up --detach --remove-orphans");
 }
 
 bool ComposeManager::down(const boost::filesystem::path &compose_file) {
