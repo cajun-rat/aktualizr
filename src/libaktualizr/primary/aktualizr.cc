@@ -117,7 +117,8 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
 
   next_online_poll_ = next_offline_poll_ = Clock::now();
   if (!config_.uptane.enable_offline_updates) {
-    // We'd like to use Clock::time_point::max() here, but it triggers a bug.
+    // We'd like to use Clock::time_point::max() here, but std::future::wait_until(Clock::time_point::max()) completes
+    // instantly rather than behaving the same as std::future::wait().
     next_offline_poll_ = Clock::now() + std::chrono::hours(24 * 365 * 10);
   }
 
@@ -169,7 +170,6 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
       }
     }
     // Drive the main event loop
-    LOG_WARNING << "State is:" << state_ << " run mode:" << static_cast<int>(exit_cond_.get());
     switch (state_) {
       case UpdateCycleState::kUnprovisioned:
         if (next_online_poll_ <= now && !op_bool_.valid()) {
@@ -202,7 +202,7 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
           std::unique_lock<std::mutex> guard{exit_cond_.m};
           if (exit_cond_.run_mode == RunMode::kOnce) {
             // We've performed one round of checks, exit from 'once' runmode.
-            LOG_WARNING << "XXXX exiting from RunMode::kOnce";
+            LOG_DEBUG << "Exiting from RunMode::kOnce";
             exit_cond_.run_mode = RunMode::kStop;
             return ExitReason::kNoUpdates;
           }
