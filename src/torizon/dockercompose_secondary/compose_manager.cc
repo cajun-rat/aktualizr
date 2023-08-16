@@ -1,4 +1,5 @@
 #include <boost/filesystem.hpp>
+#include <thread>
 
 #include "compose_manager.h"
 #include "libaktualizr/config.h"
@@ -14,11 +15,19 @@ ComposeManager::ComposeManager()
 
 bool ComposeManager::pull(const boost::filesystem::path &compose_file, const api::FlowControlToken *flow_control) {
   LOG_INFO << "Running docker-compose pull";
-  LOG_WARNING << "XXX setting abort";
   assert(flow_control);
-  auto f = const_cast<api::FlowControlToken*>(flow_control);
-  f->setAbort();
-  return CommandRunner::run(compose_cmd_ + compose_file.string() + " pull --no-parallel", flow_control);
+
+  auto *f = const_cast<api::FlowControlToken*>(flow_control);
+  std::thread th{[f] (){
+    LOG_WARNING << "XXX Waiting 10s before aborting...";
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    LOG_WARNING << "XXX setting abort";
+    f->setAbort();
+  }};
+
+  auto res = CommandRunner::run(compose_cmd_ + compose_file.string() + " pull --no-parallel", flow_control);
+  th.join();
+  return res;
 }
 
 bool ComposeManager::up(const boost::filesystem::path &compose_file) {
