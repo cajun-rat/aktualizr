@@ -198,20 +198,20 @@ int main(int argc, char *argv[]) {
 
     // handle unix signals
 #ifdef TORIZON
-    SigHandler::get().start([&aktualizr, &proxy]() {
-      proxy.Stop(false);
-      aktualizr.Abort();
-      aktualizr.Shutdown();
-    });
+    //SigHandler::get().start([&aktualizr, &proxy]() {
+    //  proxy.Stop(false);
+    //  aktualizr.Abort();
+    //  aktualizr.Shutdown();
+    //});
 #else
-    SigHandler::get().start([&aktualizr]() {
-      aktualizr.Abort();
-      aktualizr.Shutdown();
-    });
+    //SigHandler::get().start([&aktualizr]() {
+    //  aktualizr.Abort();
+    //  aktualizr.Shutdown();
+    //});
 #endif
-    SigHandler::signal(SIGHUP);
-    SigHandler::signal(SIGINT);
-    SigHandler::signal(SIGTERM);
+    //SigHandler::signal(SIGHUP);
+    //SigHandler::signal(SIGINT);
+    //SigHandler::signal(SIGTERM);
 
     if (commandline_map.count("hwinfo-file") != 0) {
       auto file = commandline_map["hwinfo-file"].as<boost::filesystem::path>();

@@ -25,7 +25,7 @@ bool ComposeManager::pull(const boost::filesystem::path &compose_file, const api
     f->setAbort();
   }};
 
-  auto res = CommandRunner::run(compose_cmd_ + compose_file.string() + " pull --no-parallel", flow_control);
+  auto res = CommandRunner::run(compose_cmd_ + compose_file.string() + " --ansi never pull --no-parallel", flow_control);
   th.join();
   return res;
 }
