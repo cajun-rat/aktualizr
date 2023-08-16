@@ -14,6 +14,10 @@ ComposeManager::ComposeManager()
 
 bool ComposeManager::pull(const boost::filesystem::path &compose_file, const api::FlowControlToken *flow_control) {
   LOG_INFO << "Running docker-compose pull";
+  LOG_WARNING << "XXX setting abort";
+  assert(flow_control);
+  auto f = const_cast<api::FlowControlToken*>(flow_control);
+  f->setAbort();
   return CommandRunner::run(compose_cmd_ + compose_file.string() + " pull --no-parallel", flow_control);
 }
 
