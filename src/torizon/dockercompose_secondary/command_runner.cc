@@ -25,7 +25,7 @@ bool CommandRunner::run(const std::string& cmd, const api::FlowControlToken* flo
       // Give it 2s to exit
       if (!child_process.wait_for(std::chrono::seconds(2))) {
         LOG_WARNING << "Process didn't respond to SIGINT, sending SIGTERM";
-        if (kill(pid, SIGINT)) {
+        if (kill(pid, SIGTERM)) {
           LOG_WARNING << "Attempt to send SIGINT to pid " << pid << " failed with " << strerror(errno);
         }
       }

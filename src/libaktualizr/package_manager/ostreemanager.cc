@@ -26,8 +26,8 @@ AUTO_REGISTER_PACKAGE_MANAGER(PACKAGE_MANAGER_OSTREE, OstreeManager);
 
 static void aktualizr_progress_cb(OstreeAsyncProgress *progress, gpointer data) {
   auto *mt = static_cast<PullMetaStruct *>(data);
-  LOG_INFO << "aktualizr_progress_cb sleeping...";
-  sleep(2);
+  //LOG_INFO << "aktualizr_progress_cb sleeping...";
+  //sleep(2);
   if (mt->token != nullptr && !mt->token->canContinue()) {
     LOG_INFO << "aktualizr_progress_cb got cancellation";
     g_cancellable_cancel(mt->cancellable.get());
