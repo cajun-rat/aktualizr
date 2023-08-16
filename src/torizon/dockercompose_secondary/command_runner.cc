@@ -19,19 +19,24 @@ bool CommandRunner::run(const std::string& cmd, const api::FlowControlToken* flo
     if (flow_control != nullptr && flow_control->hasAborted()) {
       LOG_INFO << "Killing child process due to flow_control abort";
       auto pid = child_process.id();
-      int err = kill(pid, SIGTERM);
-      if (err) {
-        LOG_WARNING << "Attempt to send SIGTERM to pid " << pid << " failed with " << strerror(errno);
+      if (kill(pid, SIGINT)) {
+        LOG_WARNING << "Attempt to send SIGINT to pid " << pid << " failed with " << strerror(errno);
+      }
+      // Give it 2s to exit
+      if (!child_process.wait_for(std::chrono::seconds(2))) {
+        LOG_WARNING << "Process didn't respond to SIGINT, sending SIGTERM";
+        if (kill(pid, SIGINT)) {
+          LOG_WARNING << "Attempt to send SIGINT to pid " << pid << " failed with " << strerror(errno);
+        }
       }
       // Give it 30s to exit cleanly
-      if (!child_process.wait_for(std::chrono::seconds(30))) {
+      if (!child_process.wait_for(std::chrono::seconds(28))) {
         LOG_WARNING << "Process didn't respond to SIGTERM, sending SIGKILL";
         child_process.terminate();
       }
       return false;
     }
   }
-  //child_process.running();
   child_process.wait();
   LOG_INFO << "Exit code is:" << child_process.exit_code();
   return child_process.exit_code() == 0;
