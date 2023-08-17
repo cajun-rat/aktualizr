@@ -5,7 +5,7 @@
 #include "libaktualizr/config.h"
 #include "logging/logging.h"
 
-static const char *const compose_cmd_prefix = "/usr/bin/docker-compose --file ";
+static const char *const compose_cmd_prefix = "/usr/lib/docker/cli-plugins/docker-compose compose --file ";
 static const char *const docker_cmd_prefix = "/usr/bin/docker ";
 static const char *const check_rollback_cmd = "/usr/bin/fw_printenv rollback";
 
