@@ -22,8 +22,7 @@ TEST(CommandRunner, Cancellation) {
   bool res;
   api::FlowControlToken token;
 
-  std::atomic<bool> did_abort;
-  did_abort = false;
+  std::atomic<bool> did_abort{false};
   auto end = std::chrono::steady_clock::now() + std::chrono::seconds(1);
 
   std::thread t1([&token, end, &did_abort] {
@@ -50,8 +49,7 @@ TEST(CommandRunner, CancellationTooLate) {
   bool res;
   api::FlowControlToken token;
 
-  std::atomic<bool> did_abort;
-  did_abort = false;
+  std::atomic<bool> did_abort{false};
   auto abort_time = std::chrono::steady_clock::now() + std::chrono::seconds(3);
   auto expected_finish_time = std::chrono::steady_clock::now() + std::chrono::seconds(1);
 
@@ -73,6 +71,8 @@ TEST(CommandRunner, CancellationTooLate) {
   EXPECT_TRUE(res);
   t1.join();
 }
+
+TEST(CommandRunner, CantStartProcess) { EXPECT_FALSE(CommandRunner::run("/xxx/not/a/process")); }
 
 #ifndef __NO_MAIN__
 int main(int argc, char** argv) {
