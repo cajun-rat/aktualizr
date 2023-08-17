@@ -5,6 +5,7 @@
 #include "libaktualizr/config.h"
 #include "logging/logging.h"
 
+//TODO: Describe why
 static const char *const compose_cmd_prefix = "/usr/lib/docker/cli-plugins/docker-compose compose --file ";
 static const char *const docker_cmd_prefix = "/usr/bin/docker ";
 static const char *const check_rollback_cmd = "/usr/bin/fw_printenv rollback";
@@ -19,14 +20,13 @@ bool ComposeManager::pull(const boost::filesystem::path &compose_file, const api
 
   auto *f = const_cast<api::FlowControlToken*>(flow_control);
   std::thread th{[f] (){
-    LOG_WARNING << "XXX Waiting 10s before aborting...";
+    LOG_WARNING << "XXX Waiting 5s before aborting...";
     std::this_thread::sleep_for(std::chrono::seconds(5));
     LOG_WARNING << "XXX setting abort";
     f->setAbort();
   }};
 
-  //auto res = CommandRunner::run(compose_cmd_ + compose_file.string() + " --ansi never pull --no-parallel", flow_control);
-  auto res = CommandRunner::run("/usr/bin/sleep 100", flow_control);
+  auto res = CommandRunner::run(compose_cmd_ + compose_file.string() + " --ansi never pull --no-parallel", flow_control);
   th.join();
   return res;
 }
