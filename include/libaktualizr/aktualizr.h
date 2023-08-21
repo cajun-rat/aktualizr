@@ -444,7 +444,8 @@ class Aktualizr {
 
   /**
    * Run the main update loop until we have a reason to exit.
-   * exit_cond_.run_mode determines if this it performs one check or many.
+   * exit_cond_.run_mode determines whether to exit after one update check or to keep going until we have an update that
+   * requires a reboot to apply..
    * @return The reason for stopping.
    */
   ExitReason RunUpdateLoop();
