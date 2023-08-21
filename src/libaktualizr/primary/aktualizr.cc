@@ -178,8 +178,7 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
       case UpdateCycleState::kUnprovisioned:
         if (next_online_poll_ <= now && !op_bool_.valid()) {
           op_bool_ = AttemptProvision();
-        }
-        if (op_bool_.valid() && op_bool_.wait_until(next_offline_poll_) == std::future_status::ready) {
+        } else if (op_bool_.valid() && op_bool_.wait_until(next_offline_poll_) == std::future_status::ready) {
           if (op_bool_.get()) {
             // Provisioned OK, send device data
             op_void_ = SendDeviceData();
@@ -189,6 +188,16 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
             next_online_poll_ = now + std::chrono::seconds(config_.uptane.polling_sec);
           }
           op_bool_ = {};  // Clear future
+        } else {
+          // Idle but unprovisioned
+          std::unique_lock<std::mutex> guard{exit_cond_.m};
+          if (exit_cond_.run_mode == RunMode::kOnce) {
+            // We tried to provision but it didn't succeed, exit
+            exit_cond_.run_mode = RunMode::kStop;
+            return ExitReason::kNoUpdates;
+          }
+          auto next_wake_up = std::min(next_offline_poll_, next_online_poll_);
+          exit_cond_.cv.wait_until(guard, next_wake_up);
         }
         break;
       case UpdateCycleState::kSendingDeviceData:
