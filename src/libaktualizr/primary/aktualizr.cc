@@ -206,7 +206,6 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
           std::unique_lock<std::mutex> guard{exit_cond_.m};
           if (exit_cond_.run_mode == RunMode::kOnce) {
             // We've performed one round of checks, exit from 'once' runmode.
-            LOG_WARNING << "XXXX exiting from RunMode::kOnce";
             exit_cond_.run_mode = RunMode::kStop;
             return ExitReason::kNoUpdates;
           }
