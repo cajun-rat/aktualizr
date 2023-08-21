@@ -93,6 +93,7 @@ std::ostream &operator<<(std::ostream &os, Aktualizr::UpdateCycleState state) {
     case Aktualizr::UpdateCycleState::kInstalling:
       os << "Installing";
       break;
+#ifdef BUILD_OFFLINE_UPDATES
     case Aktualizr::UpdateCycleState::kCheckingForUpdatesOffline:
       os << "CheckingForUpdatesOffline";
       break;
@@ -105,6 +106,7 @@ std::ostream &operator<<(std::ostream &os, Aktualizr::UpdateCycleState state) {
     case Aktualizr::UpdateCycleState::kAwaitReboot:
       os << "AwaitReboot";
       break;
+#endif  // BUILD_OFFLINE_UPDATES
     default:
       os << "Unknown(" << static_cast<int>(state) << ")";
       break;
@@ -140,6 +142,7 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
 
     if (next_offline_poll_ <= now) {
       next_offline_poll_ = now + std::chrono::seconds(1);
+#ifdef BUILD_OFFLINE_UPDATES
       // Poll the magic filesystem directory for offline updates once per second.
       switch (state_) {
         case UpdateCycleState::kUnprovisioned:
@@ -167,6 +170,7 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
           LOG_ERROR << "Unknown state:" << state_;
           state_ = UpdateCycleState::kIdle;
       }
+#endif  // BUILD_OFFLINE_UPDATES
     }
     // Drive the main event loop
     LOG_TRACE << "State is:" << state_ << " run mode:" << static_cast<int>(exit_cond_.get());
@@ -271,6 +275,7 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
           }
         }
         break;
+#ifdef BUILD_OFFLINE_UPDATES
       case UpdateCycleState::kCheckingForUpdatesOffline: {
         result::UpdateCheck const update_result = op_update_check_.get();  // No need to timeout
         if (update_result.updates.empty() || updates_disabled_) {
@@ -304,6 +309,7 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
         state_ = UpdateCycleState::kUnprovisioned;
         break;
       }
+#endif  // BUILD_OFFLINE_UPDATES
       case UpdateCycleState::kAwaitReboot: {
         uptane_client_->completeInstall();
         std::lock_guard<std::mutex> const lock{exit_cond_.m};
