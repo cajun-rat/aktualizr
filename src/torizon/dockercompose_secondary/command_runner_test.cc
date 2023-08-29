@@ -7,6 +7,7 @@
 
 #include <thread>
 #include "logging/logging.h"
+#include "utilities/utils.h"
 
 TEST(CommandRunner, Simple) {
   bool res;
@@ -69,6 +70,24 @@ TEST(CommandRunner, CancellationTooLate) {
   EXPECT_LE(-200, diff);
   EXPECT_LE(diff, 200);
   EXPECT_TRUE(res);
+  t1.join();
+}
+
+TEST(CommandRunner, ChildProcess) {
+  TemporaryFile const f1;
+  f1.PutContents("#! /bin/bash\n bash -c \"for X in [seq 100]; do echo CommandRunner ; sleep 1; done\"");
+  chmod(f1.Path().c_str(), 0755);
+  api::FlowControlToken token;
+
+  auto abort_time = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+
+  std::thread t1([&token, abort_time] {
+    std::this_thread::sleep_until(abort_time);
+    token.setAbort();
+  });
+
+  CommandRunner::run(f1.PathString(), &token);
+
   t1.join();
 }
 

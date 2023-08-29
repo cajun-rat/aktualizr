@@ -4,14 +4,17 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
+#include <thread>
 
 #include "libaktualizr/packagemanagerfactory.h"
 
 #include "aktualizr_info_config.h"
+#include "command_runner.h"
 #include "logging/logging.h"
 #include "storage/invstorage.h"
 #include "storage/sql_utils.h"
 #include "utilities/aktualizr_version.h"
+#include "utilities/flow_control.h"
 
 namespace bpo = boost::program_options;
 
@@ -49,6 +52,7 @@ int main(int argc, char **argv) {
   bpo::options_description all("aktualizr-info command line options");
   bpo::options_description description("aktualizr-info command line options");
   bpo::options_description hidden("deprecated options");
+  std::string test_cancel;
   // clang-format off
   description.add_options()
     ("help,h", "print usage")
@@ -73,7 +77,8 @@ int main(int argc, char **argv) {
     ("director-root",  "Outputs root.json from Director repo")
     ("director-targets",  "Outputs targets.json from Director repo")
     ("allow-migrate", "Opens database in read/write mode to make possible to migrate database if needed")
-    ("wait-until-provisioned", "Outputs metadata when device already provisioned");
+    ("wait-until-provisioned", "Outputs metadata when device already provisioned")
+    ("test-cancel", bpo::value<std::string>(&test_cancel), "Test command runner");
   // Support old names and variations due to common typos.
   hidden.add_options()
     ("images-root",  "Outputs root.json from Image repo")
@@ -102,6 +107,21 @@ int main(int argc, char **argv) {
     logger_init();
     if (vm.count("loglevel") == 0U) {
       logger_set_enable(false);
+    }
+
+    if (!test_cancel.empty()) {
+      std::cout << "Testing cancellation of command " << test_cancel << "\n";
+      api::FlowControlToken flow_control;
+      std::thread th([&flow_control]() {
+        std::cout << "sleeping 5s...\n";
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::cout << "... cancelling\n";
+        flow_control.setAbort();
+      });
+      bool ok = CommandRunner::run(test_cancel, &flow_control);
+      std::cout << "Run was:" << ok << "\n";
+      th.join();
+      exit(EXIT_SUCCESS);
     }
 
     AktualizrInfoConfig config(vm);

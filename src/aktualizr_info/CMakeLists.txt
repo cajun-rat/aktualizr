@@ -3,7 +3,7 @@ set(AKTUALIZR_INFO_SRC main.cc aktualizr_info_config.cc)
 set(AKTUALIZR_INFO_HEADERS aktualizr_info_config.h)
 
 add_executable(aktualizr-info ${AKTUALIZR_INFO_SRC})
-target_link_libraries(aktualizr-info aktualizr_lib)
+target_link_libraries(aktualizr-info aktualizr_lib torizon_dockercompose_secondary)
 
 install(TARGETS aktualizr-info
         COMPONENT aktualizr
