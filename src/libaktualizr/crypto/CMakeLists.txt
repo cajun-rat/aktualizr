@@ -1,9 +1,11 @@
 set(SOURCES crypto.cc
-            keymanager.cc)
+            keymanager.cc
+            string_bio.cc)
 
 set(HEADERS crypto.h
             keymanager.h
-            openssl_compat.h)
+            openssl_compat.h
+            string_bio.h)
 
 set_source_files_properties(p11engine.cc PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 

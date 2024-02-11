@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "crypto/crypto.h"
+#include "crypto/string_bio.h"
 #include "logging/logging.h"
 #include "utilities/utils.h"
 
@@ -27,15 +28,12 @@ Bootstrap::Bootstrap(const boost::filesystem::path& provision_path, const std::s
   readTlsP12(p12_str, provision_password, pkey_, cert_, ca_);
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void Bootstrap::readTlsP12(const std::string& p12_str, const std::string& provision_password, std::string& pkey,
                            std::string& cert, std::string& ca) {
-  StructGuard<BIO> reg_p12(BIO_new_mem_buf(p12_str.c_str(), static_cast<int>(p12_str.size())), BIO_vfree);
-  if (reg_p12 == nullptr) {
-    LOG_ERROR << "Unable to open P12 archive: " << std::strerror(errno);
-    throw std::runtime_error("Unable to parse bootstrap credentials");
-  }
+  ConstStringBIO reg_p12(p12_str);
 
-  if (!Crypto::parseP12(reg_p12.get(), provision_password, &pkey, &cert, &ca)) {
+  if (!Crypto::parseP12(reg_p12.bio(), provision_password, &pkey, &cert, &ca)) {
     LOG_ERROR << "Unable to parse P12 archive";
     throw std::runtime_error("Unable to parse bootstrap credentials");
   }

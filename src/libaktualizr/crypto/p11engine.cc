@@ -12,6 +12,7 @@
 #include <boost/scoped_array.hpp>
 
 #include "crypto/crypto.h"
+#include "crypto/string_bio.h"
 #include "utilities/config_utils.h"
 #include "utilities/utils.h"
 
@@ -214,13 +215,9 @@ bool P11Engine::readUptanePublicKey(const std::string& uptane_key_id, std::strin
     return false;
   }
   StructGuard<EVP_PKEY> evp_key(PKCS11_get_public_key(key), EVP_PKEY_free);
-  StructGuard<BIO> mem(BIO_new(BIO_s_mem()), BIO_vfree);
-  PEM_write_bio_PUBKEY(mem.get(), evp_key.get());
-
-  char* pem_key = nullptr;
-  // NOLINTNEXTLINE(google-runtime-int,cppcoreguidelines-pro-type-cstyle-cast)
-  long length = BIO_get_mem_data(mem.get(), &pem_key);
-  key_out->assign(pem_key, static_cast<size_t>(length));
+  StringBIO mem;
+  PEM_write_bio_PUBKEY(mem.bio(), evp_key.get());
+  *key_out = mem.str();
 
   return true;
 }
@@ -296,13 +293,9 @@ bool P11Engine::readTlsCert(const std::string& id, std::string* cert_out) const 
     LOG_ERROR << "Requested certificate was not found";
     return false;
   }
-  StructGuard<BIO> mem(BIO_new(BIO_s_mem()), BIO_vfree);
-  PEM_write_bio_X509(mem.get(), cert->x509);
-
-  char* pem_key = nullptr;
-  // NOLINTNEXTLINE(google-runtime-int,cppcoreguidelines-pro-type-cstyle-cast)
-  long length = BIO_get_mem_data(mem.get(), &pem_key);
-  cert_out->assign(pem_key, static_cast<size_t>(length));
+  StringBIO mem;
+  PEM_write_bio_X509(mem.bio(), cert->x509);
+  *cert_out = mem.str();
 
   return true;
 }
