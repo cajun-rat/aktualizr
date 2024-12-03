@@ -1,0 +1,46 @@
+Source: aktualizr-torizon
+Section: misc
+Priority: optional
+Maintainer: Toradex Packaging Team <debian-pkg-team@toradex.com>
+Uploaders: Carlos Henrique Lima Melara <carlos.melara@toradex.com>,
+           Leonardo Held <leonardo.held@toradex.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ asn1c,
+ cmake,
+ curl,
+ git,
+ libarchive-dev,
+ libboost-dev,
+ libboost-filesystem-dev,
+ libboost-log-dev,
+ libboost-program-options-dev,
+ libcurl4-openssl-dev,
+ libpthread-stubs0-dev,
+ libsodium-dev,
+ libsqlite3-dev,
+ libssl-dev,
+ python3,
+ sqlite3
+Standards-Version: 4.7.0
+Homepage: https://www.github.com/toradex/aktualizr
+Vcs-Browser: https://www.github.com/torizon/aktualizr-deb
+Vcs-Git: https://www.github.com/torizon/aktualizr-deb.git
+
+Package: aktualizr-torizon
+Architecture: any
+Depends:
+ curl,
+ jq,
+ unzip,
+ ${shlibs:Depends},
+ ${misc:Depends},
+Recommends: lshw
+Description: C++ implementation of Uptane OTA update client
+ It is intended to be installed on devices that wish to receive OTA updates
+ from an Uptane-compatible OTA server.
+ .
+ Toradex's fork of aktualizr.
+ .
+ Contains both the application and shared library.

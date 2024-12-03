@@ -1,0 +1,23 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+#export DH_VERBOSE = 1
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+	    -DAKTUALIZR_VERSION=$(DEB_VERSION_UPSTREAM) \
+	    -DBUILD_OFFLINE_UPDATES=ON \
+	    -DBUILD_OSTREE=OFF \
+	    -DBUILD_SOTA_TOOLS=OFF \
+	    -DBUILD_TESTING=OFF \
+	    -DCMAKE_LIBRARY_PATH=$(DEB_HOST_MULTIARCH) \
+	    -DWARNING_AS_ERROR=OFF
+
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/tmp
+
+override_dh_auto_test:

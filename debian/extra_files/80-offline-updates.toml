@@ -1,0 +1,5 @@
+[uptane]
+enable_online_updates = true
+# Uncomment and set the path to enable offline updates
+# enable_offline_updates =  false
+# offline_updates_source = "<path to lockbox mountpoint>"

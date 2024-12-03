@@ -1,0 +1,2 @@
+[uptane]
+secondary_config_file = "/etc/sota/secondaries.json"

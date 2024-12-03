@@ -1,0 +1,8 @@
+[tls]
+server_url_path = "/etc/sota/gateway.url"
+
+[import]
+base_path = "/var/sota/import"
+tls_cacert_path = "/etc/sota/root.crt"
+tls_clientcert_path = "client.pem"
+tls_pkey_path = "pkey.pem"

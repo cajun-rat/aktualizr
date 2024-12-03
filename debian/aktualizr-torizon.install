@@ -1,0 +1,13 @@
+debian/extra_files/20-sota-device-cred.toml etc/sota/conf.d/
+debian/extra_files/30-rollback.toml         etc/sota/conf.d/
+debian/extra_files/40-hardware-id.toml      etc/sota/conf.d/
+debian/extra_files/50-secondaries.toml      etc/sota/conf.d/
+debian/extra_files/60-polling-interval.toml etc/sota/conf.d/
+debian/extra_files/70-disable-ostree.toml   etc/sota/conf.d/
+debian/extra_files/80-offline-updates.toml  etc/sota/conf.d/
+debian/extra_files/gateway.url              etc/sota/
+debian/extra_files/root.crt                 etc/sota/
+debian/extra_files/secondaries.json         etc/sota/
+usr/bin/aktualizr-info
+usr/bin/aktualizr-torizon
+usr/lib/*/libaktualizr.so
