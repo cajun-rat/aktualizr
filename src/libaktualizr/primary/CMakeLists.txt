@@ -138,7 +138,7 @@ set_tests_properties(test_uptane_key PROPERTIES LABELS "crypto")
 
 add_aktualizr_test(NAME director_offline
                    SOURCES director_offline_test.cc
-                   ARGS ${PROJECT_SOURCE_DIR}/tests/test_data/offline1)
+                   ARGS ${PROJECT_SOURCE_DIR}/tests/test_data)
 
 add_aktualizr_test(NAME update_lock_file
                    SOURCES update_lock_file_test.cc)

@@ -11,7 +11,7 @@
 #include "uptane/fetcher.h"
 
 namespace fs = boost::filesystem;
-fs::path offline_update_path;  // NOLINT
+fs::path test_data;  // NOLINT
 
 #ifdef BUILD_OFFLINE_UPDATES
 
@@ -24,6 +24,7 @@ using Uptane::OfflineUpdateFetcher;
 TEST(DirectorOffline, Simple) {
   DirectorRepository dut;
   const TemporaryDirectory dir;
+  auto offline1 = test_data / "offline1";
 
   StorageConfig storage_config;
   storage_config.path = dir.Path();
@@ -32,7 +33,7 @@ TEST(DirectorOffline, Simple) {
   fs::path import = dir.Path() / "import";
   fs::path director_import = import / "director";
   fs::create_directories(director_import);
-  fs::copy_file(offline_update_path / "metadata/director/1.root.json", director_import / "root.json");
+  fs::copy_file(offline1 / "metadata/director/1.root.json", director_import / "root.json");
 
   SQLStorage storage{storage_config, false};
 
@@ -45,7 +46,7 @@ TEST(DirectorOffline, Simple) {
   storage.storeEcuSerials(ecu_serials);
   storage.stashEcuSerialsForHwId(ecu_serials);
 
-  OfflineUpdateFetcher const fetcher(offline_update_path);
+  OfflineUpdateFetcher const fetcher(offline1);
   dut.ForceNowForTesting(TimeStamp("2024-01-01T20:01:00Z"));
   dut.updateMetaOffUpd(storage, fetcher);
 
@@ -66,12 +67,18 @@ TEST(DirectorOffline, Unprovisioned) {
   storage.storeEcuSerials(ecu_serials);
   storage.stashEcuSerialsForHwId(ecu_serials);
 
-  OfflineUpdateFetcher const fetcher(offline_update_path);
+  OfflineUpdateFetcher const fetcher(test_data / "offline1");
   dut.ForceNowForTesting(TimeStamp("2024-01-01T20:01:00Z"));
   // NOLINTNEXTLINE
   EXPECT_THROW(dut.updateMetaOffUpd(storage, fetcher), Uptane::Exception)
       << "Shouldn't accept an update before provisioning";
 }
+
+/**
+ * Regression test for TOR-XXX.
+ * When there is only one version of the root metadata, the TOFU check fails (because....).
+ */
+TEST(DirectorOffline, OneRoot) { FAIL() << "TODO"; }
 
 #endif  // BUILD_OFFLINE_UPDATES
 
@@ -79,14 +86,14 @@ int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   if (argc != 2) {
     // NOLINTNEXTLINE
-    std::cerr << "Error: " << argv[0] << " requires a path to tests/test_data/offline1\n";
+    std::cerr << "Error: " << argv[0] << " requires a path to tests/test_data\n";
     return EXIT_FAILURE;
   }
   // NOLINTNEXTLINE
-  offline_update_path = argv[1];
+  test_data = argv[1];
 
-  if (!boost::filesystem::is_directory(offline_update_path)) {
-    std::cerr << "Error: " << offline_update_path << " is not a directory\n";
+  if (!boost::filesystem::is_directory(test_data)) {
+    std::cerr << "Error: " << test_data << " is not a directory\n";
     return EXIT_FAILURE;
   }
 
