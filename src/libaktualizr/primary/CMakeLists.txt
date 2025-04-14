@@ -149,6 +149,11 @@ add_aktualizr_test(NAME aktualizr_update_lock
                    ARGS "$<TARGET_FILE:uptane-generator>"
                    LIBRARIES uptane_generator_lib virtual_secondary)
 
+add_aktualizr_test(NAME offline_update
+                   SOURCES offline_update_test.cc
+                   ARGS ARGS ${PROJECT_SOURCE_DIR}/tests/test_data
+                   LIBRARIES virtual_secondary)
+
 if (BUILD_DBUS)
     add_aktualizr_test(NAME aktualizr_dbus
                        SOURCES aktualizr_dbus_test.cc
