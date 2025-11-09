@@ -11,6 +11,7 @@ set(SOURCES aktualizr.cc
 set(HEADERS aktualizr_helpers.h
             consent.h
             dbus.h
+            offline_logs.h
             provisioner.h
             reportqueue.h
             secondary_config.h
@@ -30,6 +31,11 @@ else (BUILD_DBUS)
     aktualizr_source_file_checks(dbus.cc)
 endif(BUILD_DBUS)
 
+if (BUILD_OFFLINE_UPDATES)
+    list(APPEND SOURCES offline_logs.cc)
+else (BUILD_OFFLINE_UPDATES)
+    aktualizr_source_file_checks(offline_logs.cc)
+endif(BUILD_OFFLINE_UPDATES)
 
 add_library(primary OBJECT ${SOURCES})
 if (BUILD_DBUS)

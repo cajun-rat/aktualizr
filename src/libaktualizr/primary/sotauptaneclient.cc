@@ -1773,6 +1773,7 @@ result::UpdateCheck SotaUptaneClient::fetchMetaOffUpd(const boost::filesystem::p
   // Prepare fetcher to be employed by the current call-chain and the following
   // operations (fetching images and installing).
   uptane_fetcher_offupd = std::make_shared<Uptane::OfflineUpdateFetcher>(source_path);
+  // TODO: Add a offline_installation_results here too  f
   LOG_INFO << "fetchMetaOffUpd() called with source_path: " << source_path;
 
   // TODO: [OFFUPD] What do we need from below?
