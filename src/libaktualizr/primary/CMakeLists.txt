@@ -172,4 +172,9 @@ add_aktualizr_test(NAME aktualizr_consent
                    PROJECT_WORKING_DIRECTORY
                    LIBRARIES uptane_generator_lib virtual_secondary)
 
+add_aktualizr_test(NAME aktualizr_offline_update
+                   SOURCES aktualizr_offline_update_test.cc
+                   PROJECT_WORKING_DIRECTORY
+                   LIBRARIES uptane_generator_lib virtual_secondary)
+
 aktualizr_source_file_checks(${SOURCES} ${HEADERS} ${TEST_SOURCES})
