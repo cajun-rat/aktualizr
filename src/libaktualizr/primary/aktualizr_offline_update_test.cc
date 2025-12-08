@@ -103,6 +103,7 @@ TEST_F(AktualizrOfflineUpdate, AktualizrInitWithLockBox) {  // NOLINT
       << "Image root metadata should be imported";
   EXPECT_FALSE(image_root.empty()) << "Image root metadata should not be empty";
 
+  // TODO: This doesn't work. Need to do it via the state machine
   auto update_result = dut.CheckUpdatesOffline(lockbox_dir_).get();
 }
 
