@@ -114,11 +114,18 @@ Configuration requirements:
 
 -   Minimize additional security risks.
 
-The location of the logs database will be at a fixed location `update-logs.db`, in the root of the offline update media as
+The location of the logs database will be at a default to `update-logs.db`, in the root of the offline update media as
 a peer to the `metadata` and `images` directories.
+This location can be overiden with the `offline_logs_file` configuration option:
 
-The manifest will always be recorded, but the set of services to capture logs from will be configurable via the
-normal Aktualizr configuration files. The default will be `aktualizr`, `aktualizr-torizon`, `docker-compose` and `greenboot-status`.
+    [logger]
+    offline_logs_file = "path/mylogfile.db"
+
+If this path is a relative path, then it is relative to the root of the offline update media.
+If it starts with `/`, then it is considered an absolute path.
+
+The set of services to capture logs from will be configurable via the normal Aktualizr configuration files.
+The default will be `aktualizr`, `aktualizr-torizon`, `docker-compose` and `greenboot-status`.
 This will cover the common case where the user is running Torizon and using Docker for their applications.
 For torizon-minimal, where the user builds a service directly in Yocto, they can place a configuration fragment in
 `/usr/lib/sota/conf.d/90-myapp.toml` (for example):
@@ -128,6 +135,11 @@ For torizon-minimal, where the user builds a service directly in Yocto, they can
 
 (Service names may be space separated since systemd unit names cannot contain spaces
 [ref](https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html#Description)).
+
+Finally, the entire feature can be disabled by setting `offline_logs_enabled` to false:
+
+    [logger]
+    offline_logs_enabled = "path/mylogfile.db"
 
 # Build Configuration
 
