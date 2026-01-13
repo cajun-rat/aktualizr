@@ -53,15 +53,12 @@ CREATE INDEX IF NOT EXISTS idx_reports_install_id ON reports(install_id);
 
 }  // namespace
 
-OfflineLogsDb::OfflineLogsDb(boost::filesystem::path db_path, SQLite3Guard db)
-    : db_path_(std::move(db_path)), db_(std::move(db)) {}
-
-std::unique_ptr<OfflineLogsDb> OfflineLogsDb::Open(const boost::filesystem::path& db_path) {
+OfflineLogsDb::OfflineLogsDb(const boost::filesystem::path& db_path) : db_path_(db_path) {
   // Check if parent directory exists and is writable
   boost::filesystem::path parent_dir = db_path.parent_path();
   if (!parent_dir.empty() && !boost::filesystem::exists(parent_dir)) {
     LOG_WARNING << "Offline logs db parent directory does not exist: " << parent_dir;
-    return nullptr;
+    return;
   }
 
   // Security: Use SQLITE_OPEN_NOFOLLOW to refuse to follow symlinks.
@@ -69,30 +66,27 @@ std::unique_ptr<OfflineLogsDb> OfflineLogsDb::Open(const boost::filesystem::path
   // to a sensitive system file. The check is atomic (no TOCTOU vulnerability).
   constexpr bool kReadonly = false;
   constexpr bool kNofollow = true;
-  SQLite3Guard db(db_path, kReadonly, nullptr, kNofollow);
-  if (db.get_rc() != SQLITE_OK) {
-    LOG_WARNING << "Can't open offline logs database: " << db.errmsg();
-    return nullptr;
+  db_.emplace(db_path, kReadonly, nullptr, kNofollow);
+  if (db_->get_rc() != SQLITE_OK) {
+    LOG_WARNING << "Can't open offline logs database: " << db_->errmsg();
+    return;
   }
-
-  // Create the OfflineLogsDb instance with the open connection
-  std::unique_ptr<OfflineLogsDb> logs_db(new OfflineLogsDb(db_path, std::move(db)));
 
   // Try to initialize the schema
-  if (!logs_db->InitializeSchema()) {
+  if (!InitializeSchema()) {
     LOG_WARNING << "Failed to initialize offline logs database at " << db_path;
-    return nullptr;
+    return;
   }
 
-  return logs_db;
+  ok_ = true;
 }
 
 bool OfflineLogsDb::InitializeSchema() {
   try {
     // Check if we already have the schema by checking for the version table
-    auto statement = db_.prepareStatement("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='version';");
+    auto statement = db_->prepareStatement("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='version';");
     if (statement.step() != SQLITE_ROW) {
-      LOG_ERROR << "Can't check for existing schema: " << db_.errmsg();
+      LOG_ERROR << "Can't check for existing schema: " << db_->errmsg();
       return false;
     }
 
@@ -101,13 +95,13 @@ bool OfflineLogsDb::InitializeSchema() {
     if (table_count == 0) {
       // No existing schema, create it
       LOG_INFO << "Creating offline logs database schema at " << db_path_;
-      if (db_.exec(kSchema, nullptr, nullptr) != SQLITE_OK) {
-        LOG_ERROR << "Can't create offline logs schema: " << db_.errmsg();
+      if (db_->exec(kSchema, nullptr, nullptr) != SQLITE_OK) {
+        LOG_ERROR << "Can't create offline logs schema: " << db_->errmsg();
         return false;
       }
     } else {
       // Verify schema version
-      auto version_stmt = db_.prepareStatement("SELECT version FROM version LIMIT 1;");
+      auto version_stmt = db_->prepareStatement("SELECT version FROM version LIMIT 1;");
       if (version_stmt.step() == SQLITE_ROW) {
         int64_t version = version_stmt.get_result_col_int(0);
         if (version > kSchemaVersion) {
@@ -129,29 +123,41 @@ bool OfflineLogsDb::InitializeSchema() {
 }
 
 InstallId OfflineLogsDb::CreateInstall(std::string_view device_id, std::string_view name, int version) {
+  if (!ok_) {
+    LOG_WARNING << "Attempt to create install on failed database";
+    return InstallId();
+  }
+
   try {
-    auto statement = db_.prepareStatement("INSERT INTO installs (device_id, name, version) VALUES (?, ?, ?);",
-                                          std::string(device_id), std::string(name), version);
+    auto statement = db_->prepareStatement("INSERT INTO installs (device_id, name, version) VALUES (?, ?, ?);",
+                                           std::string(device_id), std::string(name), version);
 
     if (statement.step() != SQLITE_DONE) {
-      LOG_ERROR << "Can't create install record: " << db_.errmsg();
+      LOG_ERROR << "Can't create install record: " << db_->errmsg();
+      ok_ = false;
       return InstallId();
     }
 
-    int64_t row_id = sqlite3_last_insert_rowid(db_.get());
+    int64_t row_id = sqlite3_last_insert_rowid(db_->get());
     LOG_DEBUG << "Created install record with id " << row_id << " for device " << device_id;
     return InstallId::FromDb(row_id);
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception creating install: " << e.what();
+    ok_ = false;
     return InstallId();
   }
 }
 
 InstallId OfflineLogsDb::FindInProgressInstall(std::string_view device_id) {
+  if (!ok_) {
+    LOG_WARNING << "Attempt to find install on failed database";
+    return InstallId();
+  }
+
   try {
     // Find the most recent install for this device with null manifest (in-progress)
-    auto statement = db_.prepareStatement(
+    auto statement = db_->prepareStatement(
         "SELECT id FROM installs WHERE device_id = ? AND manifest IS NULL ORDER BY id DESC LIMIT 1;",
         std::string(device_id));
 
@@ -166,6 +172,7 @@ InstallId OfflineLogsDb::FindInProgressInstall(std::string_view device_id) {
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception finding in-progress install: " << e.what();
+    ok_ = false;
     return InstallId();
   }
 }
@@ -176,16 +183,22 @@ void OfflineLogsDb::CompleteInstall(InstallId install_id, int64_t report_counter
     return;
   }
 
+  if (!ok_) {
+    LOG_WARNING << "Attempt to complete install on failed database";
+    return;
+  }
+
   try {
-    auto statement = db_.prepareStatement("UPDATE installs SET report_counter = ?, manifest = ? WHERE id = ?;",
-                                          report_counter, std::string(manifest), install_id.Value());
+    auto statement = db_->prepareStatement("UPDATE installs SET report_counter = ?, manifest = ? WHERE id = ?;",
+                                           report_counter, std::string(manifest), install_id.Value());
 
     if (statement.step() != SQLITE_DONE) {
-      LOG_ERROR << "Can't complete install record: " << db_.errmsg();
+      LOG_ERROR << "Can't complete install record: " << db_->errmsg();
+      ok_ = false;
       return;
     }
 
-    int changes = sqlite3_changes(db_.get());
+    int changes = sqlite3_changes(db_->get());
     if (changes == 0) {
       LOG_WARNING << "No install record found with id " << install_id.Value();
     } else {
@@ -194,6 +207,7 @@ void OfflineLogsDb::CompleteInstall(InstallId install_id, int64_t report_counter
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception completing install: " << e.what();
+    ok_ = false;
   }
 }
 
@@ -204,17 +218,24 @@ void OfflineLogsDb::AddLogEntry(InstallId install_id, int64_t timestamp_us, std:
     return;
   }
 
+  if (!ok_) {
+    LOG_WARNING << "Attempt to add log entry on failed database";
+    return;
+  }
+
   try {
     auto statement =
-        db_.prepareStatement("INSERT INTO logs (install_id, timestamp, service, message) VALUES (?, ?, ?, ?);",
-                             install_id.Value(), timestamp_us, std::string(service), std::string(message));
+        db_->prepareStatement("INSERT INTO logs (install_id, timestamp, service, message) VALUES (?, ?, ?, ?);",
+                              install_id.Value(), timestamp_us, std::string(service), std::string(message));
 
     if (statement.step() != SQLITE_DONE) {
-      LOG_ERROR << "Can't add log entry: " << db_.errmsg();
+      LOG_ERROR << "Can't add log entry: " << db_->errmsg();
+      ok_ = false;
     }
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception adding log entry: " << e.what();
+    ok_ = false;
   }
 }
 
@@ -225,18 +246,25 @@ void OfflineLogsDb::AddReport(InstallId install_id, std::string_view report_id, 
     return;
   }
 
+  if (!ok_) {
+    LOG_WARNING << "Attempt to add report on failed database";
+    return;
+  }
+
   try {
     // Use INSERT OR IGNORE to handle duplicates gracefully (report_id is part of primary key)
-    auto statement = db_.prepareStatement(
+    auto statement = db_->prepareStatement(
         "INSERT OR IGNORE INTO reports (install_id, report_id, timestamp, type, version, event) "
         "VALUES (?, ?, ?, ?, ?, ?);",
         install_id.Value(), std::string(report_id), timestamp_us, std::string(type), version, std::string(event_json));
 
     if (statement.step() != SQLITE_DONE) {
-      LOG_ERROR << "Can't add report: " << db_.errmsg();
+      LOG_ERROR << "Can't add report: " << db_->errmsg();
+      ok_ = false;
     }
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception adding report: " << e.what();
+    ok_ = false;
   }
 }

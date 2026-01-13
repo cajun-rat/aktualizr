@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -44,14 +45,17 @@ class InstallId {
  *
  * This database is stored on the offline update media (e.g., USB drive)
  * and captures logs, reports, and manifests during offline updates.
+ *
+ * The database is opened in the constructor. Use Ok() to check if the
+ * database opened correctly and hasn't encountered any errors.
  */
 class OfflineLogsDb {
  public:
   /**
-   * Factory method - opens or creates the database at the given path.
-   * Returns nullptr on failure (e.g., read-only mount, permission denied).
+   * Constructor - opens or creates the database at the given path.
+   * Check Ok() to verify the database opened correctly.
    */
-  static std::unique_ptr<OfflineLogsDb> Open(const boost::filesystem::path& db_path);
+  explicit OfflineLogsDb(const boost::filesystem::path& db_path);
 
   ~OfflineLogsDb() = default;
 
@@ -60,6 +64,12 @@ class OfflineLogsDb {
   OfflineLogsDb& operator=(const OfflineLogsDb&) = delete;
   OfflineLogsDb(OfflineLogsDb&&) = delete;
   OfflineLogsDb& operator=(OfflineLogsDb&&) = delete;
+
+  /**
+   * Check if the database opened correctly and hasn't encountered errors.
+   * @return true if the database is usable, false otherwise
+   */
+  bool Ok() const { return ok_; }
 
   /**
    * Create a new install record.
@@ -113,8 +123,6 @@ class OfflineLogsDb {
   boost::filesystem::path dbPath() const { return db_path_; }
 
  private:
-  explicit OfflineLogsDb(boost::filesystem::path db_path, SQLite3Guard db);
-
   /**
    * Initialize the database schema.
    * @return true on success, false on failure
@@ -122,7 +130,8 @@ class OfflineLogsDb {
   bool InitializeSchema();
 
   boost::filesystem::path db_path_;
-  SQLite3Guard db_;
+  std::optional<SQLite3Guard> db_;
+  bool ok_{false};
 };
 
 #endif  // OFFLINE_LOGS_DB_H_
