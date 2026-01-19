@@ -275,7 +275,7 @@ Aktualizr::ExitReason Aktualizr::RunUpdateLoop() {
           next_online_poll_ = now + std::chrono::seconds(config_.uptane.polling_sec);
           auto put_manifest_result = op_put_manifest_.get();
 
-          offline_logs_.RecordManifest(put_manifest_result.manifest);
+          // TODO: Phase 6 will integrate OfflineLogsManager here via SotaUptaneClient
 
           if (put_manifest_result.status == result::PutManifestStatus::kUnprovisioned) {
             LOG_INFO << "Didn't put manifest to server because the device was not able to provision";

@@ -12,7 +12,6 @@
 #include "libaktualizr/secondaryinterface.h"
 #include "libaktualizr/types.h"
 #include "primary/consent.h"
-#include "primary/offline_logs.h"
 #include "primary/update_lock_file.h"
 
 class SotaUptaneClient;
@@ -494,8 +493,6 @@ class Aktualizr {
     SourceExists,
   };
   OffUpdSourceState offupd_source_state_{OffUpdSourceState::Unknown};
-
-  OfflineLogs offline_logs_;  // TODO (shared_ptr?)
 
   enum class RunMode {
     kOnce,               // Run one update cycle and stop
