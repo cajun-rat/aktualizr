@@ -82,7 +82,12 @@ OfflineLogsDb::OfflineLogsDb(const boost::filesystem::path& db_path) : db_path_(
 }
 
 bool OfflineLogsDb::InitializeSchema() {
-  assert(db_.has_value());  // Invariant: Only called when db_ has a value
+  // assert this invariant in order to silence bugprone-unchecked-optional-access
+  // clang-tidy warnings
+  if (!db_.has_value()) {
+    assert(0);
+    return false;
+  }
 
   try {
     // Check if we already have the schema by checking for the version table
