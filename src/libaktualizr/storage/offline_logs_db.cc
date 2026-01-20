@@ -69,19 +69,21 @@ OfflineLogsDb::OfflineLogsDb(const boost::filesystem::path& db_path) : db_path_(
   db_.emplace(db_path, kReadonly, nullptr, kNofollow);
   if (db_->get_rc() != SQLITE_OK) {
     LOG_WARNING << "Can't open offline logs database: " << db_->errmsg();
+    db_.reset();
     return;
   }
 
   // Try to initialize the schema
   if (!InitializeSchema()) {
     LOG_WARNING << "Failed to initialize offline logs database at " << db_path;
+    db_.reset();
     return;
   }
-
-  ok_ = true;
 }
 
 bool OfflineLogsDb::InitializeSchema() {
+  assert(db_.has_value());  // Invariant: Only called when db_ has a value
+
   try {
     // Check if we already have the schema by checking for the version table
     auto statement = db_->prepareStatement("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='version';");
@@ -123,7 +125,7 @@ bool OfflineLogsDb::InitializeSchema() {
 }
 
 InstallId OfflineLogsDb::CreateInstall(std::string_view device_id, std::string_view name, int version) {
-  if (!ok_) {
+  if (!db_.has_value()) {
     LOG_WARNING << "Attempt to create install on failed database";
     return InstallId();
   }
@@ -134,7 +136,7 @@ InstallId OfflineLogsDb::CreateInstall(std::string_view device_id, std::string_v
 
     if (statement.step() != SQLITE_DONE) {
       LOG_ERROR << "Can't create install record: " << db_->errmsg();
-      ok_ = false;
+      db_.reset();
       return InstallId();
     }
 
@@ -144,13 +146,13 @@ InstallId OfflineLogsDb::CreateInstall(std::string_view device_id, std::string_v
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception creating install: " << e.what();
-    ok_ = false;
+    db_.reset();
     return InstallId();
   }
 }
 
 InstallId OfflineLogsDb::FindInProgressInstall(std::string_view device_id) {
-  if (!ok_) {
+  if (!db_.has_value()) {
     LOG_WARNING << "Attempt to find install on failed database";
     return InstallId();
   }
@@ -172,7 +174,7 @@ InstallId OfflineLogsDb::FindInProgressInstall(std::string_view device_id) {
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception finding in-progress install: " << e.what();
-    ok_ = false;
+    db_.reset();
     return InstallId();
   }
 }
@@ -183,7 +185,7 @@ void OfflineLogsDb::CompleteInstall(InstallId install_id, int64_t report_counter
     return;
   }
 
-  if (!ok_) {
+  if (!db_.has_value()) {
     LOG_WARNING << "Attempt to complete install on failed database";
     return;
   }
@@ -194,7 +196,7 @@ void OfflineLogsDb::CompleteInstall(InstallId install_id, int64_t report_counter
 
     if (statement.step() != SQLITE_DONE) {
       LOG_ERROR << "Can't complete install record: " << db_->errmsg();
-      ok_ = false;
+      db_.reset();
       return;
     }
 
@@ -207,7 +209,7 @@ void OfflineLogsDb::CompleteInstall(InstallId install_id, int64_t report_counter
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception completing install: " << e.what();
-    ok_ = false;
+    db_.reset();
   }
 }
 
@@ -218,7 +220,7 @@ void OfflineLogsDb::AddLogEntry(InstallId install_id, int64_t timestamp_us, std:
     return;
   }
 
-  if (!ok_) {
+  if (!db_.has_value()) {
     LOG_WARNING << "Attempt to add log entry on failed database";
     return;
   }
@@ -230,12 +232,12 @@ void OfflineLogsDb::AddLogEntry(InstallId install_id, int64_t timestamp_us, std:
 
     if (statement.step() != SQLITE_DONE) {
       LOG_ERROR << "Can't add log entry: " << db_->errmsg();
-      ok_ = false;
+      db_.reset();
     }
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception adding log entry: " << e.what();
-    ok_ = false;
+    db_.reset();
   }
 }
 
@@ -246,7 +248,7 @@ void OfflineLogsDb::AddReport(InstallId install_id, std::string_view report_id, 
     return;
   }
 
-  if (!ok_) {
+  if (!db_.has_value()) {
     LOG_WARNING << "Attempt to add report on failed database";
     return;
   }
@@ -260,11 +262,11 @@ void OfflineLogsDb::AddReport(InstallId install_id, std::string_view report_id, 
 
     if (statement.step() != SQLITE_DONE) {
       LOG_ERROR << "Can't add report: " << db_->errmsg();
-      ok_ = false;
+      db_.reset();
     }
 
   } catch (const SQLException& e) {
     LOG_ERROR << "SQL exception adding report: " << e.what();
-    ok_ = false;
+    db_.reset();
   }
 }

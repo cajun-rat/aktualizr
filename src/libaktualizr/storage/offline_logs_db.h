@@ -69,7 +69,7 @@ class OfflineLogsDb {
    * Check if the database opened correctly and hasn't encountered errors.
    * @return true if the database is usable, false otherwise
    */
-  bool Ok() const { return ok_; }
+  bool Ok() const { return db_.has_value(); }
 
   /**
    * Create a new install record.
@@ -131,7 +131,6 @@ class OfflineLogsDb {
 
   boost::filesystem::path db_path_;
   std::optional<SQLite3Guard> db_;
-  bool ok_{false};
 };
 
 #endif  // OFFLINE_LOGS_DB_H_
