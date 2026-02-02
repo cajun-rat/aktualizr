@@ -11,6 +11,9 @@ Usage:
 
     # Export manifest for upload
     ./offline-logs-viewer.py /media/usb/update-logs.db --install 1 --manifest
+
+    # Show systemd journal logs for an install
+    ./offline-logs-viewer.py /media/usb/update-logs.db --install 1 --logs
 """
 
 import argparse
@@ -68,7 +71,7 @@ def open_database(db_path):
     if not os.path.exists(db_path):
         print(f"Error: Database file not found: {db_path}", file=sys.stderr)
         sys.exit(1)
-    
+
     try:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -114,16 +117,66 @@ def get_report_count(conn, install_id):
     return cursor.fetchone()[0]
 
 
+def get_logs(conn, install_id):
+    """Get all log entries for an install."""
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, timestamp, service, message
+        FROM logs
+        WHERE install_id = ?
+        ORDER BY id
+    """, (install_id,))
+    return cursor.fetchall()
+
+
+def show_logs(conn, install_id):
+    """Display the systemd journal logs for a specific install."""
+    install = get_install_by_id(conn, install_id)
+
+    if install is None:
+        print(f"Error: Install #{install_id} not found", file=sys.stderr)
+        sys.exit(1)
+
+    logs = get_logs(conn, install_id)
+
+    if not logs:
+        print(f"No log entries found for Install #{install_id}")
+        return
+
+    name = install['name'] or "(unknown)"
+    print(colorize(f"\n=== Systemd Journal Logs for Install #{install_id} ===", Colors.BOLD + Colors.HEADER))
+    print(colorize(f"    Update: {name}\n", Colors.DIM))
+
+    # Track service changes for visual grouping
+    last_service = None
+
+    for log in logs:
+        timestamp = format_timestamp(log['timestamp'])
+        service = log['service']
+        message = log['message']
+
+        # Show service name when it changes
+        if service != last_service:
+            print(colorize(f"\n[{service}]", Colors.CYAN + Colors.BOLD))
+            last_service = service
+
+        # Format: timestamp message
+        ts_formatted = colorize(timestamp, Colors.DIM)
+        print(f"{ts_formatted}  {message}")
+
+    print()  # Trailing newline
+
+
 def list_installs(conn):
     """List all installs with their status."""
     installs = get_installs(conn)
-    
+
     if not installs:
         print("No installs found in database.")
         return
-    
+
     print(colorize("\n=== Offline Update Installs ===\n", Colors.BOLD + Colors.HEADER))
-    
+
     for install in installs:
         install_id = install['id']
         device_id = install['device_id']
@@ -131,16 +184,16 @@ def list_installs(conn):
         version = install['version']
         report_counter = install['report_counter']
         manifest = install['manifest']
-        
+
         # Determine status
         if manifest is not None and report_counter is not None:
             status = colorize("COMPLETE", Colors.GREEN)
         else:
             status = colorize("IN-PROGRESS", Colors.YELLOW)
-        
+
         log_count = get_log_count(conn, install_id)
         report_count = get_report_count(conn, install_id)
-        
+
         print(colorize(f"Install #{install_id}", Colors.BOLD + Colors.CYAN))
         print(f"  Status:         {status}")
         print(f"  Device ID:      {colorize(device_id, Colors.DIM)}")
@@ -157,18 +210,18 @@ def list_installs(conn):
 def export_manifest(conn, install_id):
     """Export the manifest for a specific install as JSON."""
     install = get_install_by_id(conn, install_id)
-    
+
     if install is None:
         print(f"Error: Install #{install_id} not found", file=sys.stderr)
         sys.exit(1)
-    
+
     manifest = install['manifest']
-    
+
     if manifest is None:
-        print(f"Error: Install #{install_id} has no manifest (install may be in progress)", 
+        print(f"Error: Install #{install_id} has no manifest (install may be in progress)",
               file=sys.stderr)
         sys.exit(1)
-    
+
     # Pretty-print the JSON if possible
     try:
         manifest_json = json.loads(manifest)
@@ -181,26 +234,26 @@ def export_manifest(conn, install_id):
 def show_install_summary(conn, install_id):
     """Show a summary of a specific install."""
     install = get_install_by_id(conn, install_id)
-    
+
     if install is None:
         print(f"Error: Install #{install_id} not found", file=sys.stderr)
         sys.exit(1)
-    
+
     device_id = install['device_id']
     name = install['name'] or "(unknown)"
     version = install['version']
     report_counter = install['report_counter']
     manifest = install['manifest']
-    
+
     # Determine status
     if manifest is not None and report_counter is not None:
         status = colorize("COMPLETE", Colors.GREEN)
     else:
         status = colorize("IN-PROGRESS", Colors.YELLOW)
-    
+
     log_count = get_log_count(conn, install_id)
     report_count = get_report_count(conn, install_id)
-    
+
     print(colorize(f"\n=== Install #{install_id} Summary ===\n", Colors.BOLD + Colors.HEADER))
     print(f"  Status:         {status}")
     print(f"  Device ID:      {colorize(device_id, Colors.DIM)}")
@@ -211,7 +264,7 @@ def show_install_summary(conn, install_id):
     print(f"  Log Entries:    {log_count}")
     print(f"  Report Events:  {report_count}")
     print(f"  Has Manifest:   {'Yes' if manifest else 'No'}")
-    
+
     # If manifest exists, try to extract installation result
     if manifest:
         try:
@@ -220,24 +273,24 @@ def show_install_summary(conn, install_id):
             install_report = signed.get('installation_report', {})
             report = install_report.get('report', {})
             result = report.get('result', {})
-            
+
             if result:
                 success = result.get('success', False)
                 code = result.get('code', 'UNKNOWN')
                 desc = result.get('description', '')
-                
+
                 result_str = colorize(code, Colors.GREEN if success else Colors.RED)
                 print(f"\n  Installation Result:")
                 print(f"    Code:        {result_str}")
                 print(f"    Success:     {success}")
                 if desc:
                     print(f"    Description: {desc}")
-                
+
                 # Show correlation ID if available
                 correlation_id = report.get('correlation_id')
                 if correlation_id:
                     print(f"    Update ID:   {correlation_id}")
-                
+
                 # Show per-ECU results
                 items = report.get('items', [])
                 if items:
@@ -251,7 +304,7 @@ def show_install_summary(conn, install_id):
                         print(f"    - {ecu}: {item_status}")
         except (json.JSONDecodeError, KeyError, TypeError):
             pass  # Ignore errors parsing manifest
-    
+
     print()
 
 
@@ -269,26 +322,35 @@ Examples:
 
   # Export manifest for upload
   %(prog)s /media/usb/update-logs.db --install 1 --manifest > manifest.json
+
+  # Show systemd journal logs for an install
+  %(prog)s /media/usb/update-logs.db --install 1 --logs
 """
     )
-    
+
     parser.add_argument('database', help='Path to update-logs.db file')
     parser.add_argument('--install', '-i', type=int, metavar='ID',
                         help='Show details for specific install ID')
     parser.add_argument('--manifest', '-m', action='store_true',
                         help='Export manifest as JSON (requires --install)')
-    
+    parser.add_argument('--logs', '-l', action='store_true',
+                        help='Show systemd journal logs (requires --install)')
+
     args = parser.parse_args()
-    
+
     # Validate arguments
     if args.manifest and args.install is None:
         parser.error("--manifest requires --install to specify which install")
-    
+    if args.logs and args.install is None:
+        parser.error("--logs requires --install to specify which install")
+
     conn = open_database(args.database)
-    
+
     try:
         if args.manifest:
             export_manifest(conn, args.install)
+        elif args.logs:
+            show_logs(conn, args.install)
         elif args.install is not None:
             show_install_summary(conn, args.install)
         else:
