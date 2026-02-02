@@ -138,7 +138,7 @@ JournalCopier::Cursor JournalCopier::GetCurrentCursor() {
   }
 
   Cursor cursor(cursor_str);
-  free(cursor_str);  // NOLINT(cppcoreguidelines-no-malloc)
+  free(cursor_str);  // NOLINT(cppcoreguidelines-no-malloc, hicpp-no-malloc)
 
   LOG_DEBUG << "Got journal cursor: " << cursor.ToString();
   return cursor;
